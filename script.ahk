@@ -4,7 +4,7 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 
 ;
-Global ScriptVersion := "1.0" ;
+Global ScriptVersion := "1.1" ;
 Global ScriptUpdateURL := "https://githubusercontent.com" ;
 Global UpdateURL := "https://githubusercontent.com"
 
@@ -201,10 +201,6 @@ F9::
     AddSolidButton(1, 165, 10, 145, 50, "УК РБ", "ShowUk", 0x383838, 0x4D4D4D, false)
     AddSolidButton(1, 10, 70, 145, 50, MainButtonText, "ShowMainArticles", 0x383838, 0x4D4D4D, true)
     AddSolidButton(1, 165, 70, 145, 50, "Ориентировки", "ShowOrient", 0x383838, 0x4D4D4D, false)
-    AddSolidButton(1, 10, 130, 300, 45, "Мануал использования оружия", "ShowGun", 0x383838, 0x4D4D4D, false)
-    AddSolidButton(1, 10, 185, 300, 35, "СМЕНИТЬ ПОДРАЗДЕЛЕНИЕ", "ChangeDepartment", 0x554133, 0x695547, false)
-    AddSolidButton(1, 10, 228, 300, 35, "ЗАКРЫТЬ", "CloseAllGUIs", 0x2A2A5A, 0x38387A, false)
-    
     Gui, 1:Show, w320 h275, Законка - %SelectedDepartment% (v%ScriptVersion%)
     Return
 }
