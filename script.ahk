@@ -4,7 +4,7 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 
 ;
-Global ScriptVersion := "1.0"
+Global ScriptVersion := "1.9"
 GH_Host := "https://raw." . "githubusercontent.com"
 GH_Path := "/m1rops/ahk-GYVD/refs/heads/main/"
 Global ScriptUpdateURL := GH_Host . GH_Path . "script.ahk"
@@ -13,15 +13,15 @@ Global UpdateURL := GH_Host . GH_Path . "config.ini"
 ConfigFile := A_ScriptDir "\config.ini"
 UserSettingsFile := A_ScriptDir "\user_settings.ini"
 
-;
+; 
 if !FileExist(UserSettingsFile) {
-    IniWrite, Капитан Михайлов, %UserSettingsFile%, Profile, Rang
-    IniWrite, Начальник УГАИ, %UserSettingsFile%, Profile, Doljnost
-    IniWrite, Михайлов, %UserSettingsFile%, Profile, Familiya
+    IniWrite, 1, %UserSettingsFile%, Profile, Rang
+    IniWrite, 1, %UserSettingsFile%, Profile, Doljnost
+    IniWrite, 1, %UserSettingsFile%, Profile, Familiya
 }
-IniRead, Rang, %UserSettingsFile%, Profile, Rang, Капитан Михайлов
-IniRead, Doljnost, %UserSettingsFile%, Profile, Doljnost, Начальник УГАИ
-IniRead, Familiya, %UserSettingsFile%, Profile, Familiya, Михайлов
+IniRead, Rang, %UserSettingsFile%, Profile, Rang, 1
+IniRead, Doljnost, %UserSettingsFile%, Profile, Doljnost, 1
+IniRead, Familiya, %UserSettingsFile%, Profile, Familiya, 1
 
 Global SelectedDepartment := "ГАИ"
 Global CurrentSearchSource := ""
@@ -242,35 +242,40 @@ OpenProfileSettings:
     Gui, ProfileGui:Color, 2A2A2A, 383838
     Gui, ProfileGui:Font, s9 Bold cWhite, Segoe UI
     
-    Gui, ProfileGui:Add, Text, x15 y15 w270 cYellow, Личные данные для отыгровок (F1, F6):
+    Gui, ProfileGui:Add, Text, x15 y15 w270 h20 cYellow, Личные данные для отыгровок (F1, F6):
     
-    Gui, ProfileGui:Add, Text, x15 y45 w270 cWhite, Звание и фамилия (пример: Капитан Михайлов):
+    Gui, ProfileGui:Add, Text, x15 y45 w270 h20 cWhite, Звание и фамилия (пр. Майор Михайлов):
     Gui, ProfileGui:Add, Edit, x15 y65 w270 h24 cWhite vInputRang, %Rang%
     
-    Gui, ProfileGui:Add, Text, x15 y100 w270 cWhite, Должность (пример: Начальник УГАИ):
-Gui, ProfileGui:Add, Edit, x15 y120 w270 h24 cWhite vInputDoljnost, %Doljnost%
-Gui, ProfileGui:Add, Text, x15 y155 w270 cWhite, Фамилия для /do (пример: Михайлов):
-Gui, ProfileGui:Add, Edit, x15 y175 w270 h24 cWhite vInputFamiliya, %Familiya%
-Gui, ProfileGui:Add, Button, x15 y215 w130 h32 gSaveProfileSettings, СОХРАНИТЬ
-Gui, ProfileGui:Add, Button, x155 y215 w130 h32 gProfileGuiGuiClose, ОТМЕНА
-Gui, ProfileGui:Show, w300 h260, Настройки профиля
-Return
+    Gui, ProfileGui:Add, Text, x15 y100 w270 h20 cWhite, Должность (пр. Начальник УГАИ):
+    Gui, ProfileGui:Add, Edit, x15 y120 w270 h24 cWhite vInputDoljnost, %Doljnost%
+    
+    Gui, ProfileGui:Add, Text, x15 y155 w270 h20 cWhite, Фамилия для /do (пр. Михайлов):
+    Gui, ProfileGui:Add, Edit, x15 y175 w270 h24 cWhite vInputFamiliya, %Familiya%
+    
+    Gui, ProfileGui:Add, Button, x15 y215 w130 h32 gSaveProfileSettings, СОХРАНИТЬ
+    Gui, ProfileGui:Add, Button, x155 y215 w130 h32 gProfileGuiGuiClose, ОТМЕНА
+    
+    Gui, ProfileGui:Show, w300 h260, Настройки профиля
+    Return
 }
 SaveProfileSettings:
 {
-Gui, ProfileGui:Submit
-if (InputRang != "")
-Rang := InputRang
-if (InputDoljnost != "")
-Doljnost := InputDoljnost
-if (InputFamiliya != "")
-Familiya := InputFamiliya
-IniWrite, %Rang%, %UserSettingsFile%, Profile, Rang
-IniWrite, %Doljnost%, %UserSettingsFile%, Profile, Doljnost
-IniWrite, %Familiya%, %UserSettingsFile%, Profile, Familiya
-Gui, ProfileGui:Destroy
-MsgBox, 64, Профиль сохранен, Данные обновлены!nnЗвание: %Rang%nДолжность: %Doljnost%nФамилия: %Familiya%, 3
-Return
+    Gui, ProfileGui:Submit
+    if (InputRang != "")
+        Rang := InputRang
+    if (InputDoljnost != "")
+        Doljnost := InputDoljnost
+    if (InputFamiliya != "")
+        Familiya := InputFamiliya
+        
+    IniWrite, %Rang%, %UserSettingsFile%, Profile, Rang
+    IniWrite, %Doljnost%, %UserSettingsFile%, Profile, Doljnost
+    IniWrite, %Familiya%, %UserSettingsFile%, Profile, Familiya
+    
+    Gui, ProfileGui:Destroy
+    MsgBox, 64, Профиль сохранен, Данные обновлены!`n`nЗвание: %Rang%`nДолжность: %Doljnost%`nФамилия: %Familiya%, 3
+    Return
 }
 ProfileGuiGuiClose:
 ProfileGuiGuiEscape:
@@ -396,29 +401,30 @@ GuiControl, SearchGui:Focus, SearchQuery
 }
 FilterSearchText:
 {
-Gui, SearchGui:Submit, NoHide
-if (SearchQuery = "") {
-GuiControl, SearchGui:, SearchOutput, %CurrentSearchSource%
-return
+    Gui, SearchGui:Submit, NoHide
+    if (SearchQuery = "") {
+        GuiControl, SearchGui:, SearchOutput, %CurrentSearchSource%
+        return
+    }
+    
+    FilteredResult := ""
+    SearchQueryLower := Format("{:L}", SearchQuery)
+    
+    Loop, Parse, CurrentSearchSource, `n, `r
+    {
+        LineLower := Format("{:L}", A_LoopField)
+        if InStr(LineLower, SearchQueryLower) {
+            FilteredResult .= A_LoopField . "`r`n"
+        }
+    }
+    
+    if (FilteredResult = "")
+        FilteredResult := "По запросу «" . SearchQuery . "» ничего не найдено."
+        
+    GuiControl, SearchGui:, SearchOutput, %FilteredResult%
+    return
 }
-FilteredResult := ""
-Loop, Parse, CurrentSearchSource, n, r
-{
-if InStr(A_LoopField, SearchQuery, false) {
-FilteredResult .= A_LoopField . "rn"
-}
-}
-if (FilteredResult = "")
-FilteredResult := "По запросу «" . SearchQuery . "» ничего не найдено."
-GuiControl, SearchGui:, SearchOutput, %FilteredResult%
-return
-}
-SearchGuiGuiClose:
-SearchGuiGuiEscape:
-{
-Gui, SearchGui:Destroy
-return
-}
+
 ;
 ShowGun:
 {
@@ -510,7 +516,7 @@ Send, do Что нашел %Familiya% при обыске?
 Sleep, 200
 Send, {Enter}
 return
-;
+; --- ЗАКРЫТИЕ ---
 CloseAllGUIs:
 {
 Loop, 99
