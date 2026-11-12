@@ -3,15 +3,15 @@
 SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 
-;
-Global ScriptVersion := "1.1" ;
-Global ScriptUpdateURL := "https://githubusercontent.com" ;
+; --- НАСТРОЙКИ АВТООБНОВЛЕНИЯ ---
+Global ScriptVersion := "1.1"
+Global ScriptUpdateURL := "https://raw.githubusercontent.com/m1rops/ahk-GYVD/refs/heads/main/script.ahk"
 Global UpdateURL := "https://githubusercontent.com"
 
 ConfigFile := A_ScriptDir "\config.ini"
 UserSettingsFile := A_ScriptDir "\user_settings.ini"
 
-;
+; --- ЗАГРУЗКА ЛИЧНЫХ ДАННЫХ ---
 if !FileExist(UserSettingsFile) {
     IniWrite, Капитан Михайлов, %UserSettingsFile%, Profile, Rang
     IniWrite, Начальник УГАИ, %UserSettingsFile%, Profile, Doljnost
@@ -25,8 +25,9 @@ Global SelectedDepartment := "ГАИ"
 Global CurrentSearchSource := ""
 Global BtnMap := {}
 Global LastHoveredHwnd := 0
+Global ManualUpdateCheck := false
 
-;
+; --- ТЕКСТЫ ПО УМОЛЧАНИЮ ---
 KoapText := "Информация КоАП не загружена"
 UkText := "Информация УК не загружена"
 MainArticles_GAI := "Основные статьи КоАП/УК ГАИ не загружены"
@@ -34,24 +35,32 @@ MainArticles_PPSM := "Основные статьи КоАП/УК ППСМ не 
 OrientText := "Ориентировки не загружены"
 GunText := "Оффлайн информация:`nСотрудник органов внутренних дел имеет право на применение оружия, то есть на производство выстрела (выстрелов) из него, в отношении лица:`n1. Совершающего нападение на сотрудника органов внутренних дел и (или) иного гражданина, когда их жизнь или здоровье подвергаются опасности;`n2. Совершающего нападение в составе группы или нападение, сопряженное с применением оружия либо взрывов, поджогов и иных общеопасных способов, использованием транспортных средств, машин или механизмов, на жилые помещения или иные законные владения граждан, помещения, иные объекты организаций, войсковой или служебный наряд органов внутренних дел, на лиц или объекты, охраняемые органами внутренних дел;`n3. Совершающего действие, непосредственно направленное на насильственное завладение находящимися у сотрудника органов внутренних дел оружием, боеприпасами к нему, боевой и специальной техникой или специальными средствами;`n4. Совершающего захват или удержание лица в качестве заложника;`n5. Застигнутого при совершении действий, указанных в абзацах втором–пятом настоящей части, и пытающегося скрыться;`n6. Совершающего побег из-под стражи, конвоя;`n7. Не подчинившегося законному требованию сотрудника органов внутренних дел немедленно сдать (положить) оружие, взрывчатое вещество, взрывное устройство или другие предметы, применение которых может угрожать жизни или здоровью сотрудника органов внутренних дел или иных граждан."
 
-;
+; --- ОБРАБОТЧИКИ СОБЫТИЙ ОКНА ---
 OnMessage(0x200, "OnMouseMove")
 OnMessage(0x138, "OnCtlColorStatic")
 
-;
+; --- СТАРТ ОБНОВЛЕНИЙ И ИНТЕРФЕЙСА ---
 GoSub, CheckFullUpdate
 SetTimer, CheckFullUpdate, 300000
 
 GoSub, ShowDepartmentSelection
 Return
 
-; avtoobnova
+; --- ПОЛНОЕ АВТООБНОВЛЕНИЕ (СКРИПТ + БАЗА) ---
+ManualCheckUpdate:
+{
+    ManualUpdateCheck := true
+    GoSub, CheckFullUpdate
+    Return
+}
+
 CheckFullUpdate:
 {
-    ;
-    if (!A_IsCompiled) { ; Работает для .ahk файлов
+    ConfigUpdated := false
+
+    ; 1. Проверка новой версии скрипта
+    if (!A_IsCompiled) {
         TempScript := A_Temp "\gyvd_update_temp.ahk"
-        ;
         NoCacheScriptURL := ScriptUpdateURL . "?t=" . A_TickCount
         UrlDownloadToFile, %NoCacheScriptURL%, %TempScript%
         
@@ -59,11 +68,9 @@ CheckFullUpdate:
             FileEncoding, UTF-8
             FileRead, RemoteCode, %TempScript%
             
-            ;
             if RegExMatch(RemoteCode, "i)Global\s+ScriptVersion\s*:=\s*""([^""]+)""", MatchVer) {
                 RemoteVersion := MatchVer1
                 if (RemoteVersion != "" && RemoteVersion != ScriptVersion) {
-                    ;
                     FileDelete, %A_ScriptFullPath%
                     FileAppend, %RemoteCode%, %A_ScriptFullPath%, UTF-8
                     FileDelete, %TempScript%
@@ -77,11 +84,12 @@ CheckFullUpdate:
         }
     }
 
-    ;
+    ; 2. Обновление базы статей и ориентировок
     NoCacheConfigURL := UpdateURL . "?t=" . A_TickCount
     UrlDownloadToFile, %NoCacheConfigURL%, %ConfigFile%
     
     if (!ErrorLevel) {
+        ConfigUpdated := true
         FileEncoding, UTF-8
         FileRead, IniContent, %ConfigFile%
         
@@ -105,10 +113,19 @@ CheckFullUpdate:
         if (MatchGun1 != "")
             GunText := StrReplace(MatchGun1, "\n", "`n")
     }
+
+    if (ManualUpdateCheck) {
+        ManualUpdateCheck := false
+        if (ConfigUpdated) {
+            MsgBox, 64, Проверка обновлений, У вас установлена актуальная версия скрипта (v%ScriptVersion%).`nБаза статей и ориентировок успешно обновлена!
+        } else {
+            MsgBox, 48, Ошибка обновления, Не удалось подключиться к GitHub. Проверьте интернет-соединение.
+        }
+    }
     Return
 }
 
-;
+; --- ВЫБОР ПОДРАЗДЕЛЕНИЯ ---
 ShowDepartmentSelection:
 {
     Gui, Dept:New
@@ -160,7 +177,7 @@ DestroyDeptInfo:
     Return
 }
 
-;
+; --- ПОДСКАЗКА БИНДОВ ---
 !q::
 {
     Gui, 2:Destroy    
@@ -183,7 +200,7 @@ HideOSD:
     return
 }
 
-;
+; --- ГЛАВНОЕ МЕНЮ ЗАКОНКИ ---
 F9::
 {
     Gui, 1:Destroy
@@ -201,32 +218,80 @@ F9::
     AddSolidButton(1, 165, 10, 145, 50, "УК РБ", "ShowUk", 0x383838, 0x4D4D4D, false)
     AddSolidButton(1, 10, 70, 145, 50, MainButtonText, "ShowMainArticles", 0x383838, 0x4D4D4D, true)
     AddSolidButton(1, 165, 70, 145, 50, "Ориентировки", "ShowOrient", 0x383838, 0x4D4D4D, false)
-    Gui, 1:Show, w320 h275, Законка - %SelectedDepartment% (v%ScriptVersion%)
+    AddSolidButton(1, 10, 130, 300, 42, "Мануал использования оружия", "ShowGun", 0x383838, 0x4D4D4D, false)
+    AddSolidButton(1, 10, 182, 145, 38, "Настройки профиля", "OpenProfileSettings", 0x4A3B2C, 0x634F3B, false)
+    AddSolidButton(1, 165, 182, 145, 38, "Обновить базу/код", "ManualCheckUpdate", 0x2B4C3F, 0x396654, false)
+    AddSolidButton(1, 10, 228, 300, 35, "СМЕНИТЬ ПОДРАЗДЕЛЕНИЕ", "ChangeDepartment", 0x554133, 0x695547, false)
+    AddSolidButton(1, 10, 271, 300, 35, "ЗАКРЫТЬ", "CloseAllGUIs", 0x2A2A5A, 0x38387A, false)
+    
+    Gui, 1:Show, w320 h316, Законка - %SelectedDepartment% (v%ScriptVersion%)
     Return
 }
 
-;
-AddSolidButton(GuiName, X, Y, W, H, Text, Label, BgBGR, HoverBGR, IsMultiLine := false) {
-    Global BtnMap
-    bgBrush := DllCall("CreateSolidBrush", "UInt", BgBGR, "Ptr")
-    hoverBrush := DllCall("CreateSolidBrush", "UInt", HoverBGR, "Ptr")
+; --- ОКНО НАСТРОЙКИ ПРОФИЛЯ ---
+OpenProfileSettings:
+{
+    Gui, ProfileGui:New, +AlwaysOnTop
+    Gui, ProfileGui:Color, 2A2A2A, 383838
+    Gui, ProfileGui:Font, s9 Bold cWhite, Segoe UI
     
-    if (IsMultiLine) {
-        Gui, %GuiName%:Add, Text, x%X% y%Y% w%W% h9 g%Label% hwndPadHwnd
-        TextY := Y + 9
-        TextH := H - 9
-        Gui, %GuiName%:Add, Text, x%X% y%TextY% w%W% h%TextH% Center cWhite g%Label% hwndBtnHwnd, %Text%
-        
-        btnObj := {bg: BgBGR, hover: HoverBGR, bgBrush: bgBrush, hoverBrush: hoverBrush, hovered: false, pair: PadHwnd}
-        padObj := {bg: BgBGR, hover: HoverBGR, bgBrush: bgBrush, hoverBrush: hoverBrush, hovered: false, pair: BtnHwnd}
-        BtnMap[BtnHwnd] := btnObj
-        BtnMap[PadHwnd] := padObj
-    } else {
-        Gui, %GuiName%:Add, Text, x%X% y%Y% w%W% h%H% +0x200 Center cWhite g%Label% hwndBtnHwnd, %Text%
+    Gui, ProfileGui:Add, Text, x15 y15 w270 cYellow, Личные данные для отыгровок (F1, F6):
+    
+    Gui, ProfileGui:Add, Text, x15 y45 w270 cWhite, Звание и фамилия (пример: Капитан Михайлов):
+    Gui, ProfileGui:Add, Edit, x15 y65 w270 h24 cWhite vInputRang, %Rang%
+    
+    Gui, ProfileGui:Add, Text, x15 y100 w270 cWhite, Должность (пример: Начальник УГАИ):
+    Gui, ProfileGui:Add, Edit, x15 y120 w270 h24 cWhite vInputDoljnost, %Doljnost%
+    
+    Gui, ProfileGui:Add, Text, x15 y155 w270 cWhite, Фамилия для /do (пример: Михайлов):
+    Gui, ProfileGui:Add, Edit, x15 y175 w270 h24 cWhite vInputFamiliya, %Familiya%
+    
+Gui, ProfileGui:Add, Button, x15 y215 w130 h32 gSaveProfileSettings, СОХРАНИТЬ
+Gui, ProfileGui:Add, Button, x155 y215 w130 h32 gProfileGuiGuiClose, ОТМЕНА
+Gui, ProfileGui:Show, w300 h260, Настройки профиля
+Return
+}
+SaveProfileSettings:
+{
+Gui, ProfileGui:Submit
+if (InputRang != "")
+Rang := InputRang
+if (InputDoljnost != "")
+Doljnost := InputDoljnost
+if (InputFamiliya != "")
+Familiya := InputFamiliya
+IniWrite, %Rang%, %UserSettingsFile%, Profile, Rang
+IniWrite, %Doljnost%, %UserSettingsFile%, Profile, Doljnost
+IniWrite, %Familiya%, %UserSettingsFile%, Profile, Familiya
+Gui, ProfileGui:Destroy
+MsgBox, 64, Профиль сохранен, Данные обновлены!nnЗвание: %Rang%nДолжность: %Doljnost%nФамилия: %Familiya%, 3
+Return
+}
+ProfileGuiGuiClose:
+ProfileGuiGuiEscape:
+{
+Gui, ProfileGui:Destroy
+Return
+}
+; --- ФУНКЦИИ ОТРИСОВКИ КНОПОК ---
+AddSolidButton(GuiName, X, Y, W, H, Text, Label, BgBGR, HoverBGR, IsMultiLine := false) {
+Global BtnMap
+bgBrush := DllCall("CreateSolidBrush", "UInt", BgBGR, "Ptr")
+hoverBrush := DllCall("CreateSolidBrush", "UInt", HoverBGR, "Ptr")
+if (IsMultiLine) {
+Gui, %GuiName%:Add, Text, x%X% y%Y% w%W% h9 g%Label% hwndPadHwnd
+TextY := Y + 9
+TextH := H - 9
+Gui, %GuiName%:Add, Text, x%X% y%TextY% w%W% h%TextH% Center cWhite g%Label% hwndBtnHwnd, %Text%
+btnObj := {bg: BgBGR, hover: HoverBGR, bgBrush: bgBrush, hoverBrush: hoverBrush, hovered: false, pair: PadHwnd}
+padObj := {bg: BgBGR, hover: HoverBGR, bgBrush: bgBrush, hoverBrush: hoverBrush, hovered: false, pair: BtnHwnd}
+BtnMap[BtnHwnd] := btnObj
+BtnMap[PadHwnd] := padObj
+} else {
+Gui, %GuiName%:Add, Text, x%X% y%Y% w%W% h%H% +0x200 Center cWhite g%Label% hwndBtnHwnd, %Text%
 BtnMap[BtnHwnd] := {bg: BgBGR, hover: HoverBGR, bgBrush: bgBrush, hoverBrush: hoverBrush, hovered: false, pair: 0}
 }
 }
-;
 OnCtlColorStatic(wParam, lParam) {
 Global BtnMap
 if (BtnMap.HasKey(lParam)) {
@@ -236,7 +301,6 @@ DllCall("SetBkMode", "Ptr", wParam, "Int", 1)
 return btn.hovered ? btn.hoverBrush : btn.bgBrush
 }
 }
-;
 OnMouseMove(wParam, lParam, msg, hwnd) {
 Global BtnMap, LastHoveredHwnd
 if (hwnd = LastHoveredHwnd)
@@ -287,7 +351,7 @@ if (btn.hoverBrush)
 DllCall("DeleteObject", "Ptr", btn.hoverBrush)
 }
 }
-;
+; --- ОКНА С ЖИВЫМ ПОИСКОМ ---
 ShowKoap:
 {
 OpenSearchWindow("КоАП РБ", KoapText)
@@ -350,7 +414,7 @@ SearchGuiGuiEscape:
 Gui, SearchGui:Destroy
 return
 }
-;
+; --- ОСТАЛЬНЫЕ ОКНА ---
 ShowGun:
 {
 MsgBox, 64, Мануал использования оружия, %GunText%
@@ -362,7 +426,7 @@ Gui, 1:Destroy
 Gosub, ShowDepartmentSelection
 Return
 }
-;
+; --- ОТЫГРОВКИ ---
 F1::
 Send, .
 Sleep, 200
@@ -449,6 +513,7 @@ Loop, 99
 Gui, %A_Index%:Destroy
 }
 Gui, SearchGui:Destroy
+Gui, ProfileGui:Destroy
 Return
 }
 GuiEscape:
