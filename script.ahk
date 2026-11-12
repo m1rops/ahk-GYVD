@@ -4,7 +4,7 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 
 ;
-Global ScriptVersion := "1.9"
+Global ScriptVersion := "1.0"
 GH_Host := "https://raw." . "githubusercontent.com"
 GH_Path := "/m1rops/ahk-GYVD/refs/heads/main/"
 Global ScriptUpdateURL := GH_Host . GH_Path . "script.ahk"
